@@ -33,7 +33,23 @@ class MultiBranchForensicsDataset(Dataset):
         }
     """
 
-    def __init__(self, metadata_path: str | Path, split: str, image_size: int):
+    def __init__(
+        self,
+        metadata_path: str | Path,
+        split: str,
+        image_size: int,
+        pre_transform: Optional[callable] = None,
+    ):
+        """
+        Args:
+            pre_transform: optional callable(PIL.Image) -> PIL.Image applied
+                immediately after loading, before any branch-specific
+                processing. Used by the robustness suite (Stage 5) to apply
+                a degradation (JPEG compression, blur, etc.) consistently to
+                what all three branches see — without this hook, RGB/FFT/
+                residual branches could see three different "versions" of
+                the same degradation, which would confound the results.
+        """
         df = pd.read_csv(metadata_path)
         self.df = df[df["split"] == split].reset_index(drop=True)
         if self.df.empty:
@@ -43,6 +59,7 @@ class MultiBranchForensicsDataset(Dataset):
             )
         self.image_size = image_size
         self.rgb_transform = build_transforms(image_size, train=(split == "train"))
+        self.pre_transform = pre_transform
 
     def __len__(self) -> int:
         return len(self.df)
@@ -50,6 +67,9 @@ class MultiBranchForensicsDataset(Dataset):
     def __getitem__(self, idx: int):
         row = self.df.iloc[idx]
         pil_image = Image.open(row["path"]).convert("RGB")
+
+        if self.pre_transform is not None:
+            pil_image = self.pre_transform(pil_image)
 
         rgb_tensor = self.rgb_transform(pil_image)
 
