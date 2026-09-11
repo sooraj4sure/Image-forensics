@@ -1,0 +1,63 @@
+# ImageForensics AI — master configuration
+# Every path/hyperparameter used by src/ code should be read from here
+# (via src/config.py), never hardcoded inline in scripts.
+
+project:
+  name: "image-forensics-ai"
+  seed: 42                       # global reproducibility seed (numpy/torch/random)
+
+paths:
+  data_raw: "data/raw"
+  data_processed: "data/processed"
+  data_metadata: "data/metadata/metadata.csv"
+  models_dir: "models"
+  runs_dir: "runs"                # training logs / checkpoints / metrics per experiment
+
+data:
+  image_size: 224                 # ResNet-18 standard input size
+  batch_size: 32
+  num_workers: 2                  # keep low — Colab/Kaggle free tier CPU cores are limited
+  val_split: 0.15
+  test_split: 0.15                # remainder is train
+  # Filled in once the dataset is selected (Stage 2) — left explicit/empty now
+  # rather than guessed, per the brief's "no fabricated info" rule.
+  dataset_name: null
+  dataset_source_url: null
+  dataset_license: null
+  generator_families: []          # e.g. ["StableDiffusion", "Midjourney", "DALL-E"]
+  held_out_generator: null        # generator family excluded from training entirely
+
+model:
+  backbone: "resnet18"
+  pretrained: true
+  num_classes: 2                  # REAL=0, AI_GENERATED=1 (fixed mapping — see src/data)
+  dropout: 0.3
+
+training:
+  epochs: 20
+  learning_rate: 0.0003
+  weight_decay: 0.0001
+  optimizer: "adamw"
+  scheduler: "cosine"
+  early_stopping_patience: 5
+  amp: true                       # mixed precision — helps on free Colab GPU tier
+
+ablation:
+  configs: ["rgb_only", "rgb_fft", "rgb_residual", "full_fusion"]
+
+calibration:
+  method: "temperature_scaling"
+  n_bins_ece: 15
+
+robustness:
+  jpeg_quality_levels: [30, 60, 85]
+  resize_scale: 0.5
+  crop_fraction: 0.8
+  blur_kernel: 5
+  noise_std: 0.05
+
+serving:
+  api_host: "0.0.0.0"
+  api_port: 8000
+  max_upload_mb: 10
+  allowed_extensions: [".jpg", ".jpeg", ".png", ".webp"]

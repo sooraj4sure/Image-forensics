@@ -1,0 +1,48 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# --- Virtual environments ---
+venv/
+.venv/
+env/
+
+# --- Environment / secrets ---
+.env
+.env.local
+
+# --- Data (large / not committed — see data/README.md for how to regenerate) ---
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/raw/real/.gitkeep
+!data/raw/ai/.gitkeep
+!data/processed/train/.gitkeep
+!data/processed/val/.gitkeep
+!data/processed/test/.gitkeep
+
+# --- Model weights (large binaries — track via release/HF Hub, not git) ---
+models/*.pt
+models/*.pth
+models/*.onnx
+!models/.gitkeep
+
+# --- Logs / experiment outputs ---
+runs/
+logs/
+*.log
+wandb/
+
+# --- OS / editor cruft ---
+.DS_Store
+.idea/
+.vscode/
+
+# --- Streamlit ---
+.streamlit/secrets.toml
