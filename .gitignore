@@ -19,10 +19,11 @@ env/
 .env.local
 
 # --- Data (large / not committed — see data/README.md for how to regenerate) ---
-data/raw/*
-data/processed/*
-!data/raw/.gitkeep
-!data/processed/.gitkeep
+data/raw/real/*
+data/raw/ai/*
+data/processed/train/*
+data/processed/val/*
+data/processed/test/*
 !data/raw/real/.gitkeep
 !data/raw/ai/.gitkeep
 !data/processed/train/.gitkeep
