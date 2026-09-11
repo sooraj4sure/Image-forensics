@@ -4,7 +4,7 @@
 > forensic evidence (Grad-CAM, per-branch signal breakdown, metadata observations) —
 > not just a label. Built with open-source CV/ML only, no paid APIs.
 
-**Status:** 🚧 In progress — Stage 1 (environment setup) complete. See roadmap below.
+**Status:** 🚧 In progress — Stages 1-3 complete (project init, dataset pipeline, baseline model + training loop). See roadmap below.
 
 ---
 
@@ -30,7 +30,7 @@
 
 ---
 
-## Quickstart (current state — Stage 1)
+## Quickstart (current state — Stages 1-3)
 
 ```bash
 git clone <repo-url>
@@ -43,7 +43,17 @@ python3 -m venv .venv
 
 # Run tests
 ./.venv/bin/python -m pytest tests/ -v
+
+# Once real data is in data/raw/ (see data/README.md):
+./.venv/bin/python -m src.data.build_metadata     # builds data/metadata/metadata.csv
+./.venv/bin/python -m src.training.train          # trains the RGB-only baseline
 ```
+
+> Note: pretrained ImageNet weights are fetched from `download.pytorch.org` at
+> first run — make sure that's reachable in your environment (it is on
+> Colab/Kaggle; it was NOT reachable in the sandboxed dev environment this
+> repo was scaffolded in, so the baseline model code was smoke-tested there
+> with `pretrained: false` instead — see commit history).
 
 ## Project Structure
 
