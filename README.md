@@ -4,7 +4,7 @@
 > forensic evidence (Grad-CAM, per-branch signal breakdown, metadata observations) —
 > not just a label. Built with open-source CV/ML only, no paid APIs.
 
-**Status:** 🚧 In progress — Stages 1-3 complete (project init, dataset pipeline, baseline model + training loop). See roadmap below.
+**Status:** 🚧 In progress — Stages 1-4 complete (project init, dataset pipeline, baseline model, 4-config ablation study). See roadmap below.
 
 ---
 
@@ -47,6 +47,7 @@ python3 -m venv .venv
 # Once real data is in data/raw/ (see data/README.md):
 ./.venv/bin/python -m src.data.build_metadata     # builds data/metadata/metadata.csv
 ./.venv/bin/python -m src.training.train          # trains the RGB-only baseline
+./.venv/bin/python -m src.training.train_ablation # trains all 4 ablation configs, writes runs/ablation_comparison.md
 ```
 
 > Note: pretrained ImageNet weights are fetched from `download.pytorch.org` at
