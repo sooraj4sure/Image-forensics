@@ -49,3 +49,5 @@ wandb/
 
 # --- Streamlit ---
 .streamlit/secrets.toml
+.coverage
+htmlcov/

@@ -74,3 +74,19 @@ def test_model_size_mb_matches_known_param_count():
     size = model_size_mb(FakeModel())
     expected = (1000 * 4) / (1024 ** 2)
     assert abs(size - expected) < 1e-9
+
+
+def test_measure_inference_time_returns_positive_float():
+    import torch
+    import torch.nn as nn
+
+    from src.evaluation.metrics import measure_inference_time
+
+    model = nn.Linear(10, 2)
+    sample_input = torch.randn(1, 10)
+    device = torch.device("cpu")
+
+    latency_ms = measure_inference_time(model, sample_input, device, n_warmup=2, n_runs=5)
+    assert isinstance(latency_ms, float)
+    assert latency_ms > 0.0
+    assert latency_ms < 5000.0  # sanity bound — a linear layer should be near-instant

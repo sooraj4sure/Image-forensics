@@ -4,7 +4,7 @@
 > forensic evidence (Grad-CAM, per-branch signal breakdown, metadata observations) —
 > not just a label. Built with open-source CV/ML only, no paid APIs.
 
-**Status:** 🚧 In progress — Stages 1-6 complete (project init, dataset pipeline, baseline model, 4-config ablation study, unseen-generator eval + robustness suite, calibration + Grad-CAM + FastAPI/Streamlit serving). See roadmap below.
+**Status:** 🚧 In progress — Stages 1-7 complete (project init, dataset pipeline, baseline model, 4-config ablation study, unseen-generator eval + robustness suite, calibration + Grad-CAM + serving, full test coverage — 98 tests, 96% coverage). See roadmap below.
 
 ---
 
@@ -43,6 +43,9 @@ python3 -m venv .venv
 
 # Run tests
 ./.venv/bin/python -m pytest tests/ -v
+
+# Run tests with coverage
+./.venv/bin/python -m pytest --cov=src --cov=api --cov-report=term-missing
 
 # Once real data is in data/raw/ (see data/README.md):
 ./.venv/bin/python -m src.data.build_metadata     # builds data/metadata/metadata.csv
