@@ -7,8 +7,9 @@ scikit-learn>=1.4
 opencv-python-headless>=4.9
 Pillow>=10.2
 
-# --- Explainability ---
-grad-cam>=1.5.0            # pytorch-grad-cam
+# --- Explainability: Grad-CAM implemented manually in src/explainability/
+# (FusionModel's dict-input signature doesn't fit off-the-shelf Grad-CAM
+# libraries, which assume a single-tensor model input) — no extra dep needed
 
 # --- Metadata / EXIF ---
 exifread>=3.0.0
@@ -32,6 +33,7 @@ pydantic>=2.6
 # --- Testing ---
 pytest>=8.0
 httpx>=0.27          # for testing FastAPI endpoints
+piexif>=1.1.3        # test-only: constructs synthetic EXIF blocks in tests/test_exif.py
 
 # --- Reproducibility ---
 python-dotenv>=1.0

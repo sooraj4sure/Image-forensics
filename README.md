@@ -4,7 +4,7 @@
 > forensic evidence (Grad-CAM, per-branch signal breakdown, metadata observations) —
 > not just a label. Built with open-source CV/ML only, no paid APIs.
 
-**Status:** 🚧 In progress — Stages 1-5 complete (project init, dataset pipeline, baseline model, 4-config ablation study, unseen-generator eval + robustness suite). See roadmap below.
+**Status:** 🚧 In progress — Stages 1-6 complete (project init, dataset pipeline, baseline model, 4-config ablation study, unseen-generator eval + robustness suite, calibration + Grad-CAM + FastAPI/Streamlit serving). See roadmap below.
 
 ---
 
@@ -50,6 +50,11 @@ python3 -m venv .venv
 ./.venv/bin/python -m src.training.train_ablation # trains all 4 ablation configs, writes runs/ablation_comparison.md
 ./.venv/bin/python -m src.evaluation.unseen_generator --config full_fusion  # held-out-generator generalization test
 ./.venv/bin/python -m src.evaluation.run_robustness_suite                   # JPEG/resize/crop/blur/noise stress test
+./.venv/bin/python -m src.evaluation.fit_calibration --config full_fusion   # fits temperature scaling on val set
+
+# Serving (needs a trained full_fusion checkpoint + fitted temperature.json):
+./.venv/bin/uvicorn api.main:app --reload           # FastAPI at http://127.0.0.1:8000 (docs at /docs)
+./.venv/bin/streamlit run app/streamlit_app.py      # Streamlit UI
 ```
 
 > Note: pretrained ImageNet weights are fetched from `download.pytorch.org` at
