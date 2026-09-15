@@ -9,6 +9,7 @@ re-implementing prediction logic — keeps them consistent by construction.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -78,11 +79,25 @@ class ForensicsPipeline:
         self.config_name = config_name
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        checkpoint_path = self.cfg.paths.resolve("runs_dir") / f"ablation_{config_name}" / "best_model.pt"
+        # IMAGEFORENSICS_MODEL_DIR lets a deployed environment (e.g. a
+        # Hugging Face Space, where the committed model lives at a fixed
+        # path rather than under the experiment-naming runs/ablation_<config>
+        # convention used during local development) point the pipeline at
+        # wherever the checkpoint + temperature.json actually are. Falls
+        # back to the normal local-dev convention if unset.
+        override_dir = os.environ.get("IMAGEFORENSICS_MODEL_DIR")
+        if override_dir:
+            checkpoint_dir = Path(override_dir)
+        else:
+            checkpoint_dir = self.cfg.paths.resolve("runs_dir") / f"ablation_{config_name}"
+
+        checkpoint_path = checkpoint_dir / "best_model.pt"
         if not checkpoint_path.exists():
             raise FileNotFoundError(
                 f"No trained checkpoint at {checkpoint_path}. Train first with "
-                f"src.training.train_ablation before starting the inference pipeline."
+                f"src.training.train_ablation before starting the inference pipeline, "
+                f"or set IMAGEFORENSICS_MODEL_DIR to point at a directory containing "
+                f"best_model.pt (and optionally temperature.json)."
             )
 
         self.model = build_fusion_model(config_name, self.cfg.model).to(self.device)
@@ -99,7 +114,7 @@ class ForensicsPipeline:
         # rather than failing — calibration is a refinement, not a hard
         # dependency for the pipeline to function.
         self.temperature_scaler = TemperatureScaler().to(self.device)
-        temp_path = self.cfg.paths.resolve("runs_dir") / f"ablation_{config_name}" / "temperature.json"
+        temp_path = checkpoint_dir / "temperature.json"
         if temp_path.exists():
             with open(temp_path) as f:
                 t_value = json.load(f)["temperature"]

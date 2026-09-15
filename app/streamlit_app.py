@@ -10,6 +10,18 @@ Run as: ./.venv/bin/streamlit run app/streamlit_app.py
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# streamlit run app/streamlit_app.py (same as `python app/streamlit_app.py`)
+# only puts THIS script's directory on sys.path, not the repo root — so
+# `from src... import ...` below fails with ModuleNotFoundError unless we
+# add the repo root explicitly. Confirmed by actually running this both
+# via `python app/streamlit_app.py` and `streamlit run ...` during Stage 8
+# deployment prep — the bare script execution failed with exactly that
+# error before this fix was added.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import streamlit as st
 from PIL import Image, UnidentifiedImageError
 

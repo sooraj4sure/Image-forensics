@@ -91,3 +91,26 @@ def test_pipeline_report_to_dict_is_json_serializable():
         model_version="test@0",
     )
     json.dumps(report.to_dict())  # should not raise
+
+
+def test_pipeline_respects_model_dir_env_override(tmp_path, monkeypatch):
+    # HF Spaces deployment convention: model files live at a fixed path
+    # (e.g. models/production/), not under runs/ablation_<config>/. The
+    # pipeline should find them there when the env var is set, even if
+    # cfg.paths.runs_dir points somewhere with no checkpoint at all.
+    cfg = load_config()
+    cfg = cfg.model_copy(deep=True)
+    cfg.paths.runs_dir = str(tmp_path / "empty_runs_dir_no_checkpoint_here")
+    cfg.model.pretrained = False
+
+    override_dir = tmp_path / "production_model"
+    override_dir.mkdir(parents=True)
+    model = build_fusion_model("full_fusion", cfg.model)
+    torch.save(model.state_dict(), override_dir / "best_model.pt")
+
+    monkeypatch.setenv("IMAGEFORENSICS_MODEL_DIR", str(override_dir))
+    pipeline = ForensicsPipeline(config_name="full_fusion", cfg=cfg)
+
+    img = Image.new("RGB", (64, 64), color=(90, 90, 90))
+    report, _ = pipeline.analyze(img)
+    assert report.predicted_class in ("REAL", "AI_GENERATED")

@@ -11,7 +11,8 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
-APP_PATH = str(Path(__file__).resolve().parent.parent / "app" / "streamlit_app.py")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+APP_PATH = str(REPO_ROOT / "app" / "streamlit_app.py")
 
 
 def test_app_runs_without_crashing_with_no_checkpoint():
@@ -33,3 +34,25 @@ def test_app_title_renders():
     assert not at.exception
     titles = [t.value for t in at.title]
     assert any("ImageForensics AI" in t for t in titles)
+
+
+def test_app_importable_as_bare_script_subprocess():
+    # Regression test for a real bug found during Stage 8 deployment prep:
+    # `streamlit run app/streamlit_app.py` (and plain `python
+    # app/streamlit_app.py`) only puts the SCRIPT's own directory on
+    # sys.path, not the repo root — so `from src... import ...` failed with
+    # ModuleNotFoundError. AppTest-based tests above don't catch this
+    # because pytest's own sys.path insertion masks the problem. A real
+    # subprocess, launched exactly like Streamlit launches it, does not
+    # get that masking — this is the actual repro.
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [sys.executable, "app/streamlit_app.py"],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    assert "ModuleNotFoundError" not in result.stderr, result.stderr

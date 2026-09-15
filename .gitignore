@@ -31,6 +31,10 @@ data/processed/test/*
 !data/processed/test/.gitkeep
 
 # --- Model weights (large binaries — track via release/HF Hub, not git) ---
+# NOTE: this only matches files directly under models/, NOT models/production/
+# — that directory holds the deployed model for HF Spaces and IS meant to be
+# committed (via git-lfs, see .gitattributes) despite this rule. See
+# DEPLOYMENT.md for the full HF Spaces deployment flow.
 models/*.pt
 models/*.pth
 models/*.onnx

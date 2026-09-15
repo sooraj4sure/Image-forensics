@@ -1,0 +1,6 @@
+# Track the deployed model's binary weights via git-lfs — both GitHub and
+# Hugging Face Spaces support git-lfs, and it keeps a ~40-90MB binary out
+# of regular git history/diffs. Requires `git lfs install` once per machine
+# (see DEPLOYMENT.md) before these files are added.
+models/production/*.pt filter=lfs diff=lfs merge=lfs -text
+models/production/*.pth filter=lfs diff=lfs merge=lfs -text
