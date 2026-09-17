@@ -4,6 +4,10 @@
 # live in requirements-dev.txt instead.
 
 # --- Core ML / CV (open-source only, no paid APIs) ---
+# Pinned to exact versions where possible for reproducibility; if your
+# Python version can't satisfy these (e.g. very new Python on Windows),
+# drop the == pins to torch>=2.6 / torchvision>=0.21 instead and let pip
+# pick a matching compatible pair.
 torch==2.4.1
 torchvision==0.19.1
 numpy>=1.26

@@ -19,13 +19,18 @@ data:
   num_workers: 2                  # keep low — Colab/Kaggle free tier CPU cores are limited
   val_split: 0.15
   test_split: 0.15                # remainder is train
-  # Filled in once the dataset is selected (Stage 2) — left explicit/empty now
-  # rather than guessed, per the brief's "no fabricated info" rule.
-  dataset_name: null
-  dataset_source_url: null
-  dataset_license: null
-  generator_families: []          # e.g. ["StableDiffusion", "Midjourney", "DALL-E"]
-  held_out_generator: null        # generator family excluded from training entirely
+  # Dataset: GenImage subset (kaggle.com/datasets/renhuang8/genimage-subset-detection).
+  # License NOT independently verified here — confirm on the dataset's Kaggle
+  # page before publishing the README's license section.
+  # Real: 6000 images. AI: sd_pool 5000, gan_pool 500, mj_pool 500.
+  dataset_name: "GenImage (subset)"
+  dataset_source_url: "https://www.kaggle.com/datasets/renhuang8/genimage-subset-detection"
+  dataset_license: null     # fill in after verifying on Kaggle
+  generator_families: ["stable_diffusion", "gan", "midjourney"]
+  held_out_generator: "gan"  # smallest of the two candidate held-out pools (500 vs 500,
+                              # tied on size) but the more meaningful generalization test:
+                              # train on two diffusion-family generators (sd, midjourney),
+                              # test on a different generation architecture entirely (GAN)
 
 model:
   backbone: "resnet18"
