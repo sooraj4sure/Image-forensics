@@ -206,9 +206,10 @@ prediction*, not regions proven to be AI-generated.
 ```bash
 git clone <repo-url>
 cd image-forensics-ai
-python3 -m venv .venv
-./.venv/bin/pip install -r requirements.txt              # runtime deps
-./.venv/bin/pip install -r requirements-dev.txt           # + test deps (optional, local dev only)
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt              # runtime deps
+pip install -r requirements-dev.txt           # + test deps (optional, local dev only)
 
 # Verify config loads correctly
 ./.venv/bin/python -m src.config

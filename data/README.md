@@ -1,4 +1,4 @@
-# Dataset — decided
+# Dataset
 
 ## Status: GenImage subset confirmed and organized. License NOT yet independently verified.
 

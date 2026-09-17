@@ -27,7 +27,7 @@ data:
   dataset_source_url: "https://www.kaggle.com/datasets/renhuang8/genimage-subset-detection"
   dataset_license: null     # fill in after verifying on Kaggle
   generator_families: ["stable_diffusion", "gan", "midjourney"]
-  held_out_generator: "gan"  # smallest of the two candidate held-out pools (500 vs 500,
+  held_out_generator: "gan" # smallest of the two candidate held-out pools (500 vs 500,
                               # tied on size) but the more meaningful generalization test:
                               # train on two diffusion-family generators (sd, midjourney),
                               # test on a different generation architecture entirely (GAN)
