@@ -80,15 +80,24 @@ def train_one_config(config_name: str, cfg, train_loader, val_loader, test_loade
     print(f"\n=== Training config: {config_name} ({ABLATION_CONFIGS[config_name]}) ===")
     set_seed(cfg.project.seed)  # re-seed identically before each config's training
 
+    run_dir = cfg.paths.resolve("runs_dir") / f"ablation_{config_name}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    existing_result_path = run_dir / "test_result.json"
+    existing_checkpoint_path = run_dir / "best_model.pt"
+    if existing_result_path.exists() and existing_checkpoint_path.exists():
+        with open(existing_result_path) as f:
+            cached_result = json.load(f)
+        print(f"=== Skipping {config_name} — already trained (found {existing_result_path}) ===")
+        print(f"  cached: test_f1={cached_result['test_f1']:.4f} test_roc_auc={cached_result['test_roc_auc']:.4f}")
+        return cached_result
+
     model = build_fusion_model(config_name, cfg.model).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=cfg.training.learning_rate, weight_decay=cfg.training.weight_decay
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg.training.epochs)
-
-    run_dir = cfg.paths.resolve("runs_dir") / f"ablation_{config_name}"
-    run_dir.mkdir(parents=True, exist_ok=True)
 
     best_val_f1 = -1.0
     epochs_without_improvement = 0
