@@ -16,13 +16,11 @@ license: mit
 > forensic evidence (Grad-CAM, per-branch signal breakdown, metadata observations) —
 > not just a label. Built with open-source CV/ML only, no paid APIs.
 
-**Status:** 🚧 Engineering complete (Stages 1-8), **blocked on real training data**. Every
-line of the pipeline — dataset handling, baseline model, 4-config ablation, unseen-generator
-eval, robustness testing, calibration, Grad-CAM, FastAPI/Streamlit serving, HF Spaces
-deployment scaffolding — is built, tested (104 tests, 96%+ coverage), and verified
-end-to-end on synthetic placeholder data. Sections below marked **PENDING** need a real
-dataset trained through the pipeline before they can be filled with real numbers — per
-this project's own ground rules, no metric is reported here without an actual run behind it.
+**Status:** ✅ Trained on real data (GenImage subset, 12,000 images). Full engineering
+pipeline (Stages 1-8) built, tested (106 tests, 96%+ coverage), and now backed by real
+results — ablation study, unseen-generator generalization, robustness testing, and
+calibration are all real numbers from an actual run, not placeholders. Only the live
+deployment link is still pending.
 
 ---
 
@@ -30,15 +28,15 @@ this project's own ground rules, no metric is reported here without an actual ru
 
 - [Problem & Motivation](#problem--motivation)
 - [Architecture](#architecture)
-- [Dataset](#dataset) — PENDING real data
+- [Dataset](#dataset)
 - [Preprocessing](#preprocessing)
 - [Model Architecture](#model-architecture)
 - [Training Procedure](#training-procedure)
-- [Ablation Study](#ablation-study) — PENDING real data
-- [Unseen-Generator Generalization](#unseen-generator-generalization) — PENDING real data
-- [Robustness Testing](#robustness-testing) — PENDING real data
-- [Calibration](#calibration) — PENDING real data
-- [Grad-CAM Examples](#grad-cam-examples) — PENDING real data
+- [Ablation Study](#ablation-study)
+- [Unseen-Generator Generalization](#unseen-generator-generalization)
+- [Robustness Testing](#robustness-testing)
+- [Calibration](#calibration)
+- [Grad-CAM Examples](#grad-cam-examples)
 - [Installation & Local Run](#installation--local-run)
 - [API Usage](#api-usage)
 - [Live Demo](#live-demo) — PENDING deployment
@@ -108,11 +106,32 @@ apples-to-apples rather than four independently-tuned models.
 
 ## Dataset
 
-**PENDING.** See [`data/README.md`](data/README.md) for the two candidates under
-consideration (GenImage, leaning towards, vs. CIFAKE as fallback) and why — this section
-gets filled in with the actual chosen dataset, its verified license terms, class
-balance, and generator breakdown once real data is downloaded and run through
-[`src/data/build_metadata.py`](src/data/build_metadata.py).
+**[GenImage (subset)](https://www.kaggle.com/datasets/renhuang8/genimage-subset-detection)**
+— 12,000 images total. License: **Apache-2.0**, confirmed directly from the Kaggle CLI's
+download output (`License(s): apache-2.0`), not assumed.
+
+| Source | Class | Generator | Count |
+|---|---|---|---|
+| `real_pool` | REAL | — | 6,000 |
+| `sd_pool` | AI_GENERATED | Stable Diffusion | 5,000 |
+| `gan_pool` | AI_GENERATED | GAN | 500 (held out — see below) |
+| `mj_pool` | AI_GENERATED | Midjourney | 500 |
+
+Balanced 6,000 REAL / 6,000 AI_GENERATED. Three distinct generator families satisfy the
+brief's requirement of 2-3 families for training with one held out entirely.
+
+**Held-out generator: GAN.** Chosen over holding out Stable Diffusion (would leave only
+1,000 AI training images — too thin) and over Midjourney (also 500 images, tied on size)
+— GAN was the more meaningful choice: it means training only on diffusion-family
+generators and testing whether the model generalizes to a *different generation
+architecture entirely*, not just a different diffusion variant.
+
+Splits (seed=42, stratified): 8,050 train / 1,725 val / 1,725 test / 500 unseen_test
+(100% held-out GAN images). Reproduced identically across two separate training
+sessions, including after a full dataset re-download — confirms the split logic is
+genuinely deterministic, not just deterministic in theory.
+
+Full details: [`data/README.md`](data/README.md).
 
 ## Preprocessing
 
@@ -162,54 +181,119 @@ identical protocol).
 
 ## Ablation Study
 
-**PENDING real data.** Will report accuracy/precision/recall/F1/ROC-AUC for all 4
-configs (`rgb_only`, `rgb_fft`, `rgb_residual`, `full_fusion`) under an identical eval
-protocol, answering: do the frequency and residual branches actually add signal over
-RGB alone, or not? (Brief's own framing: measure it, don't assume it.)
+All 4 configs trained with an identical protocol (same splits, same 8 epochs, same
+optimizer/scheduler, same eval function) on the real GenImage split described above:
+
+| Config | Test Acc | Test Prec | Test Recall | Test F1 | Test ROC-AUC |
+|---|---|---|---|---|---|
+| rgb_only | 0.9432 | 0.9292 | 0.9539 | **0.9414** | **0.9855** |
+| rgb_fft | 0.9362 | 0.9365 | 0.9297 | 0.9331 | 0.9831 |
+| full_fusion | 0.9270 | 0.9216 | 0.9261 | 0.9238 | 0.9795 |
+| rgb_residual | 0.9252 | 0.9123 | 0.9333 | 0.9227 | 0.9801 |
+
+**Honest finding, not the one hoped for: `rgb_only` slightly outperformed every fusion
+config, including `full_fusion`.** The frequency and residual branches did not add
+measurable signal here — this is exactly the "measure it, don't assume it" answer the
+brief's research questions (§15, Q2-Q3) ask for, reported straight rather than
+massaged. A plausible explanation, offered as a caveat rather than a conclusion: the
+RGB branch starts from ImageNet-pretrained weights, while the FFT and residual
+branches train from random initialization — 8 epochs (reduced from a planned 20 due to
+a real Colab free-tier compute-quota constraint encountered mid-training) may not be
+enough for those branches to contribute useful signal yet. A longer run on more
+capable hardware is the natural next step to test whether this finding holds or
+reverses. `full_fusion` remains the deployed model despite not topping this table,
+since it's the config the unseen-generator and robustness evaluations below are
+designed around — see those sections for why fusion still matters for a different
+question (generalization) than raw in-distribution accuracy.
 
 ## Unseen-Generator Generalization
 
-**PENDING real data.** This is the project's strongest planned claim: train excluding
-one generator family entirely, then report the AI-detection rate on that held-out
-generator vs. the in-distribution AI-detection rate on generators the model *did*
-train on. Note: because the held-out-generator test set is, by construction, AI-only
-(single-class), the comparison metric is detection rate/recall specifically, not
-accuracy/F1/ROC-AUC, which need both classes present — see
-[`src/evaluation/unseen_generator.py`](src/evaluation/unseen_generator.py) for why.
+**This is the project's strongest result — and it's a stark one.** `full_fusion`,
+trained only on Stable Diffusion + Midjourney (never seeing GAN images during
+training), was evaluated on:
+
+- **In-distribution AI_GENERATED recall (trained generators): 92.6%**
+- **Unseen-generator (GAN) detection rate: 6.0%**
+- **Drop: 86.6 percentage points**
+
+The model essentially cannot detect GAN-generated images at all once it's never seen
+that generation architecture — despite performing well on diffusion-family generators
+it wasn't specifically trained on the *style* of (Midjourney vs. Stable Diffusion are
+already somewhat distinct). Whatever RGB/frequency/residual signal the model learned
+from diffusion artifacts evidently does not transfer to GAN artifacts.
+
+This is reported as a finding, not a failure to fix: it directly demonstrates why
+"trained on some generators" is nowhere close to "generalizes to all AI generation,"
+and argues strongly against treating any single-architecture-trained detector as a
+general-purpose one. Because the unseen-generator test set is, by construction,
+AI-only (single-class), the comparison metric is detection rate/recall specifically —
+see [`src/evaluation/unseen_generator.py`](src/evaluation/unseen_generator.py) for why
+accuracy/F1/ROC-AUC aren't well-defined there.
 
 ## Robustness Testing
 
-**PENDING real data.** Will report accuracy/F1 delta on the final fusion model under
-JPEG compression (3 quality levels), downscale/upscale, center crop, Gaussian blur, and
-added noise — see [`src/evaluation/robustness.py`](src/evaluation/robustness.py).
-Screenshot-transform robustness and adversarial perturbation are explicitly out of
-scope for v1 (see [Future Work](#future-work)).
+`full_fusion` evaluated on the clean test set vs. each degradation, applied on top of
+the same 1,725 test images:
+
+| Degradation | Accuracy | Δ Accuracy | F1 | Δ F1 |
+|---|---|---|---|---|
+| Clean (baseline) | 0.9270 | — | 0.9238 | — |
+| JPEG q=30 | 0.9275 | +0.0006 | 0.9223 | -0.0015 |
+| JPEG q=60 | 0.9275 | +0.0006 | 0.9239 | +0.0001 |
+| JPEG q=85 | 0.9229 | -0.0041 | 0.9199 | -0.0039 |
+| Resize ×0.5 | 0.9252 | -0.0017 | 0.9229 | -0.0009 |
+| Center crop 0.8 | 0.9119 | -0.0151 | 0.9105 | -0.0133 |
+| Gaussian blur (k=5) | 0.8568 | **-0.0701** | 0.8321 | **-0.0917** |
+| Added noise (σ=0.05) | 0.8672 | **-0.0597** | 0.8420 | **-0.0819** |
+
+JPEG compression, resizing, and cropping barely move the model at all — in fact JPEG
+q=30/60 shows a slight, likely noise-level improvement, not a real one. **Blur and
+noise are a different story**, both costing 6-9 points of F1. This tracks with the
+architecture: blur and noise directly attack the exact high-frequency signal the
+residual and frequency branches are built to detect, so a real drop there is expected
+rather than surprising. Screenshot transforms and adversarial perturbation remain
+explicitly out of scope (see [Future Work](#future-work)).
 
 ## Calibration
 
-**PENDING real data.** Will report Expected Calibration Error (ECE) before/after
-temperature scaling, fit on the validation set, plus a reliability diagram — see
-[`src/evaluation/calibration.py`](src/evaluation/calibration.py) and
-[`src/evaluation/fit_calibration.py`](src/evaluation/fit_calibration.py).
+Expected Calibration Error (ECE) on `full_fusion`, temperature fit on the validation
+set (never test):
+
+| | ECE |
+|---|---|
+| Before calibration (raw softmax) | 0.0443 |
+| After calibration (T=1.668) | **0.0253** |
+
+The model was already reasonably well-calibrated out of the box (4.4% ECE isn't
+badly overconfident), and temperature scaling improved it further to 2.5%.
+
+![Reliability diagram](screenshots/reliability_diagram.png)
 
 ## Grad-CAM Examples
 
-**PENDING real data.** Will include at least one honest failure case (a real false
-positive and a real false negative) alongside successful predictions, per this
-project's own rule against showing only wins. Grad-CAM is computed over the RGB
-branch only — see [`src/explainability/gradcam.py`](src/explainability/gradcam.py).
-UI/API copy is explicit that the heatmap shows *regions that influenced the
-prediction*, not regions proven to be AI-generated.
+Found by scanning the real test set for genuine misclassifications (not constructed) —
+see [`src/evaluation/generate_report_assets.py`](src/evaluation/generate_report_assets.py):
+
+**False positive** (a REAL image the model predicted AI_GENERATED):
+
+![False positive](screenshots/false_positive.png)
+
+**False negative** (an AI_GENERATED image the model predicted REAL):
+
+![False negative](screenshots/false_negative.png)
+
+Grad-CAM is computed over the RGB branch only. As stated everywhere this heatmap
+appears in the UI/API: it shows *regions that influenced the model's prediction*, not
+regions proven to be AI-generated.
 
 ## Installation & Local Run
 
 ```bash
 git clone <repo-url>
 cd image-forensics-ai
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt              # runtime deps
-pip install -r requirements-dev.txt           # + test deps (optional, local dev only)
+python3 -m venv .venv
+./.venv/bin/pip install -r requirements.txt              # runtime deps
+./.venv/bin/pip install -r requirements-dev.txt           # + test deps (optional, local dev only)
 
 # Verify config loads correctly
 ./.venv/bin/python -m src.config
@@ -327,6 +411,13 @@ the core differentiator experiments:
 - **Full robustness cross-product grid** — the robustness suite tests each
   degradation independently on the final fusion model only, not every combination
   across every ablation config.
+- **Longer training run.** Training epochs were reduced from a planned 20 to 8 mid-run
+  due to a real Colab free-tier compute-quota limit encountered during training (see
+  commit history). Given the ablation study's finding that the fusion branches didn't
+  outperform RGB-only at 8 epochs, a longer run — especially on more capable hardware
+  — is a natural next step to test whether that result holds or reverses once the
+  FFT/residual branches (which train from random initialization, unlike the
+  ImageNet-pretrained RGB branch) have more time to contribute signal.
 
 ## Project Structure
 
@@ -356,13 +447,13 @@ image-forensics-ai/
 
 - No paid LLM/AI API anywhere in the core detection system.
 - No fabricated datasets, benchmarks, or metrics — every number in this README comes
-  from an actual run, which is exactly why several sections above are marked PENDING
-  rather than filled with placeholder figures.
+  from an actual run against real data (GenImage subset). The one section still marked
+  PENDING (Live Demo) is pending an actual deployment, not a placeholder figure.
 - $0 recurring cost; final demo is a free, publicly deployed link (Hugging Face
   Spaces, CPU tier).
 
 ## License
 
-Code: MIT (see [`LICENSE`](LICENSE)). Dataset license will be documented here,
-verbatim, once a real dataset is selected and verified — see
-[`data/README.md`](data/README.md).
+Code: MIT (see [`LICENSE`](LICENSE)). Dataset: GenImage (subset), **Apache-2.0**,
+confirmed directly from the Kaggle CLI's download output — see
+[`data/README.md`](data/README.md) for details.
