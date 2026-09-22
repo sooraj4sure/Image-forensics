@@ -1,0 +1,5 @@
+Pushing to https://github.com/sooraj4sure/Image-forensics.git
+To https://github.com/sooraj4sure/Image-forensics.git
+ = [up to date]      main -> main
+updating local tracking ref 'refs/remotes/origin/main'
+Everything up-to-date
